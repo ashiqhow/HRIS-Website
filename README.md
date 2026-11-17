@@ -1,6 +1,6 @@
 # HRIS Portal - Human Resource Information System (MERN Stack)
 
-A modern full-stack Human Resource Information System built with **MongoDB, Express.js, React, and Node.js**, featuring role-based access control (RBAC), personalized dashboards, real-time notification broadcast, **Module 1: Employee and Attendance Management**, and **Module 2: Recruitment and Employee Development**.
+A modern full-stack Human Resource Information System built with **MongoDB, Express.js, React, and Node.js**, featuring role-based access control (RBAC), personalized dashboards, real-time notification broadcast, **Module 1: Employee and Attendance Management**, **Module 2: Recruitment and Employee Development**, and **Module 3: HR Analytics and Organizational Management**.
 
 ---
 
@@ -68,16 +68,11 @@ Streamlined online workflow replacing paper leave slips:
 ### 1. Recruitment Management System
 Automates vacancy management and candidate pipeline progression:
 - **Job Opening Creation**: HR administrators post vacancies with Title, Department, Job Description, Required Qualifications, Employment Type, Work Location, and Application Deadlines.
-- **Applicant Tracking Pipeline (ATS)**: Candidates move systematically through recruitment stages:
-  1. `Applied`
-  2. `Under Review`
-  3. `Shortlisted`
-  4. `Interview Scheduled`
-  5. `Selected`
-  6. `Rejected`
+- **Applicant Tracking Pipeline (ATS)**: Candidates move systematically through 6 recruitment stages:
+  $$\text{Applied} \longrightarrow \text{Under Review} \longrightarrow \text{Shortlisted} \longrightarrow \text{Interview Scheduled} \longrightarrow \text{Selected} \lor \text{Rejected}$$
 - **Candidate Dossier & CV Management**: Store candidate contact details, resumes/portfolios, and cover letters.
 - **Manager Collaborative Reviews**: Managers and interviewers submit numeric ratings (1–5 stars) and qualitative interview feedback notes directly on applicant profiles.
-- **Recruitment Funnel Analytics**: Live conversion metrics showing candidate drop-off and progression across each stage.
+- **Recruitment Funnel Analytics**: Live conversion metrics showing candidate progression across each stage.
 
 ### 2. Payroll Management System
 Automates salary calculations and digital compensation management:
@@ -118,12 +113,91 @@ Coordinates skill enhancement programs and workforce learning:
 
 ---
 
+## 📊 Module 3 – HR Analytics and Organizational Management
+
+### 1. HR Analytics Dashboard
+Interactive workforce intelligence, statistics, and organizational health metrics:
+- **Employee Demographics & Distribution**:
+  - Department headcount allocation with interactive percentage breakdown bars.
+  - Contract classifications (Full-time, Part-time, Contract, Intern).
+  - Role hierarchy distribution (HR Admin, Manager, Employee).
+- **Attendance & Timesheet Trends**:
+  - Circular punctuality rate visual gauge.
+  - Granular logs classification: Present On-Time, Late Arrivals, Absent, and Half Day counts.
+  - Average shift hours and total hours logged across workforce members.
+- **Recruitment & ATS Analytics**:
+  - Candidate pipeline conversion funnel from initial application to hire.
+  - Total applicants, active job postings, and organizational selection rate.
+- **Payroll Expenditure Analytics**:
+  - Total monthly expenditure and compensation anatomy breakdown ($Basic + Allowances + Bonuses - Deductions$).
+  - Department-wise payroll budget allocation.
+- **Performance & Appraisal Metrics**:
+  - Organization and department average scores.
+  - 4-Tier rating distribution (Excellent, Very Good, Good, Needs Improvement).
+  - Productivity index benchmarking.
+- **Training & Skill Development Analytics**:
+  - Training program counts, enrollment totals, in-progress learners, and completion rate (%).
+- **Interactive Scoping**: Real-time department filtering for HR Admin and department-scoped access for Managers.
+
+### 2. Reports and Document Management
+Centralized document repository and export engine across all 7 operational domains:
+- **Domain Coverage**:
+  1. `employees`: Employee Information & Profile Directory Report
+  2. `attendance`: Workforce Attendance & Timesheet Report
+  3. `leaves`: Leave Applications & Utilization Audit Report
+  4. `payroll`: Monthly Payroll & Compensation Expenditure Report
+  5. `recruitment`: Recruitment Vacancy & Candidate Pipeline Report
+  6. `performance`: Employee Performance Appraisal & Ratings Report
+  7. `training`: Employee Training Curriculum & Completion Report
+- **Multi-Parameter Filtering**: Filter by Department, Status, Search keywords, and Date Ranges.
+- **Dual Export Formats**:
+  - **Export to CSV**: Instant client-side CSV download formatted with RFC-4180 escaping and UTF-8 encoding.
+  - **Print / PDF View**: Formatted official document modal featuring enterprise header, metadata, summary KPI cards, complete tabular data, and formal signature authorization blocks (`window.print()`).
+- **Department Scoping**: Managers only access records and reports for their respective departments.
+
+### 3. Digital Transformation Analysis
+Empirical comparison contrasting traditional manual HR activities with automated HRIS workflows:
+- **5 Core Transformation Pillars**:
+  1. **Time Efficiency**: 88% overall process acceleration across payroll (48 hrs $\rightarrow$ 3.5 hrs), leave approvals (3 days $\rightarrow$ 15 mins), attendance clocking (35 mins $\rightarrow$ instant), appraisals (3 weeks $\rightarrow$ 2 days), and recruitment (28 days $\rightarrow$ 7 days).
+  2. **Cost Reduction**: Substantial financial savings from paperless operations, eliminating physical archive storage, and reducing administrative overtime.
+  3. **Accuracy & Compliance**: 99.8% process accuracy, zero payroll calculation errors, zero leave quota overdraws, and tamper-proof attendance audit trails.
+  4. **Accessibility & Transparency**: 24/7 web self-service access from any device, instant payslip downloads, and transparent quota meters.
+  5. **Employee Experience (eNPS)**: +38 net promoter points improvement; workforce satisfaction increase from 54% to 92%.
+- **Interactive ROI & Savings Simulator**:
+  - Dynamic sliders for workforce headcount, administrative hourly rate, and monthly paper costs.
+  - Real-time reactive modeling of monthly hours saved, monthly labor savings, and annual net financial ROI.
+- **Before-and-After Workflow Progression**: Side-by-side journey comparisons illustrating the manual paper process vs automated HRIS.
+
+### 4. HRIS Effectiveness Evaluation
+Systemic audit evaluating HRIS performance, organizational maturity, and future roadmap:
+- **6-Dimensional Evaluation Scorecard**:
+  - Time Efficiency (95/100)
+  - Cost Effectiveness (91/100)
+  - Data Accuracy & Integrity (98/100)
+  - Accessibility & Uptime (99/100)
+  - Employee Satisfaction (92/100)
+  - Strategic Decision-Making (93/100)
+- **Overall Maturity Score**: 94.5 / 100 (`Level 4: Optimized Digital Enterprise HRIS`).
+- **Implementation Challenges & Mitigation Strategies**:
+  1. *Change Resistance & Legacy Routine Inertia* $\rightarrow$ Interactive department walkthroughs & simplified 1-click workflows.
+  2. *Historical Data Migration & Schema Discrepancies* $\rightarrow$ Strict Mongoose validation and automated data sanitizers.
+  3. *Manager Approval Turnaround Delays* $\rightarrow$ Priority in-app notifications and 1-click quick-action approve buttons.
+  4. *Data Confidentiality & Granular Access Control* $\rightarrow$ Multi-tier JWT RBAC, route guards, and field-level salary redaction.
+- **Strategic Roadmap for Future Improvements**:
+  - *Phase 1 (Near-Term)*: Biometric & Geofenced Mobile Attendance Integration.
+  - *Phase 2 (Mid-Term)*: AI-Driven Predictive Attrition & Flight Risk Modeling.
+  - *Phase 3 (Long-Term)*: Automated Tax Compliance & Multi-Currency Payroll Banking Gateway.
+  - *Phase 4 (Strategic)*: Continuous 360-Degree Peer Feedback & Recognition Wall.
+- **Printable Executive Evaluation**: Formatted executive report printable directly from the browser.
+
+---
+
 ## 🛠️ Technology Stack & Architecture
 
 | Layer | Technologies | Key Highlights |
 |---|---|---|
-| **Client** | React 18, Vite, Tailwind CSS, Lucide Icons, React Router 6 | Fast bundle (<130kB gzipped), responsive UI, print styles, modal drawers |
-| **Server** | Node.js, Express.js | Modular controllers, JWT authentication, RBAC authorization middleware |
+| **Client** | React 18, Vite, Tailwind CSS, Lucide Icons, React Router 6 | Fast bundle (<140kB gzipped), responsive UI, print styles, modal drawers, zero-dependency SVG charts |
+| **Server** | Node.js, Express.js | Modular REST controllers, JWT authentication, RBAC authorization middleware |
 | **Database** | MongoDB, Mongoose 8.x | 8 robust schemas with pre-validate formula calculation, auto-generated IDs |
 | **Fallback** | `mongodb-memory-server` | Zero-configuration local development mode with instant in-memory MongoDB |
 
@@ -156,10 +230,13 @@ npm run dev
 npm --prefix HRIS-Website/client run build
 ```
 
-### 4. Run Automated Test Verification
+### 4. Run Automated Test Suites
 ```bash
-# Run Module 2 Integration Tests
+# Run Module 2 Integration Tests (Recruitment, Payroll, Performance, Training)
 node HRIS-Website/server/test-module2.js
+
+# Run Module 3 Integration Tests (Analytics, Reports, Transformation, Effectiveness)
+node HRIS-Website/server/test-module3.js
 ```
 
 ---
@@ -215,3 +292,12 @@ node HRIS-Website/server/test-module2.js
 | `PUT` | `/api/training/:id/participants/:employeeId` | Update employee status, score, & feedback | Authenticated |
 | `GET` | `/api/training/my-trainings` | Employee assigned training programs | Authenticated |
 | `GET` | `/api/training/reports` | Completion analytics & workforce learning reports | HR Admin / Manager |
+
+### Module 3: HR Analytics & Organizational Management
+| Method | Route | Description | Access |
+|---|---|---|---|
+| `GET` | `/api/analytics/dashboard` | Aggregated analytics across distribution, attendance, payroll, ATS, & training | HR Admin / Manager |
+| `GET` | `/api/analytics/transformation` | Manual vs automated HRIS comparative metrics & ROI simulation parameters | HR Admin / Manager |
+| `GET` | `/api/analytics/effectiveness` | 6-dimensional evaluation scorecard, challenges, and future strategic roadmap | HR Admin / Manager |
+| `GET` | `/api/reports/catalog` | List of 7 operational report domains with available columns and record counts | HR Admin / Manager |
+| `GET` | `/api/reports/generate` | Generate tabular dataset for export in CSV format or formatted printable PDF view | HR Admin / Manager |

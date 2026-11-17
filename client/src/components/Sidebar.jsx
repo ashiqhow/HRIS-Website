@@ -14,6 +14,10 @@ import {
   CreditCard,
   Award,
   GraduationCap,
+  BarChart3,
+  FileText,
+  Zap,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
@@ -82,6 +86,37 @@ const Sidebar = ({ isOpen, onClose }) => {
       icon: GraduationCap,
       badge: null,
       visible: true,
+    },
+    {
+      label: 'HR Analytics',
+      to: '/analytics',
+      icon: BarChart3,
+      badge: 'Live',
+      badgeColor: 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30',
+      visible: isHRAdmin || isManager,
+    },
+    {
+      label: 'Reports & Documents',
+      to: '/reports',
+      icon: FileText,
+      badge: 'PDF/CSV',
+      badgeColor: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
+      visible: isHRAdmin || isManager,
+    },
+    {
+      label: 'Transformation Analysis',
+      to: '/transformation',
+      icon: Zap,
+      badge: null,
+      visible: isHRAdmin || isManager,
+    },
+    {
+      label: 'HRIS Effectiveness',
+      to: '/effectiveness',
+      icon: Sparkles,
+      badge: 'Audit',
+      badgeColor: 'bg-purple-500/20 text-purple-300 border border-purple-500/30',
+      visible: isHRAdmin || isManager,
     },
     {
       label: 'Notification Center',

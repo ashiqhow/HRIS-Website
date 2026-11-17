@@ -19,6 +19,10 @@ const payrollRoutes = require('./routes/payrollRoutes');
 const performanceRoutes = require('./routes/performanceRoutes');
 const trainingRoutes = require('./routes/trainingRoutes');
 
+// Module 3: Analytics & Organizational Management Routes
+const analyticsRoutes = require('./routes/analyticsRoutes');
+const reportsRoutes = require('./routes/reportsRoutes');
+
 const app = express();
 
 // Connect to Database
@@ -47,6 +51,10 @@ app.use('/api/recruitment', recruitmentRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/performance', performanceRoutes);
 app.use('/api/training', trainingRoutes);
+
+// Module 3: HR Analytics & Organizational Management Routes
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/reports', reportsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

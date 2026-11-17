@@ -21,6 +21,10 @@ import Recruitment from './pages/Recruitment';
 import Payroll from './pages/Payroll';
 import Performance from './pages/Performance';
 import Training from './pages/Training';
+import HRAnalytics from './pages/HRAnalytics';
+import ReportsHub from './pages/ReportsHub';
+import Transformation from './pages/Transformation';
+import Effectiveness from './pages/Effectiveness';
 
 // Main Authenticated Layout
 const MainLayout = ({ children }) => {
@@ -152,6 +156,50 @@ const AppRoutes = () => {
           <ProtectedRoute>
             <MainLayout>
               <Training />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/analytics"
+        element={
+          <ProtectedRoute allowedRoles={['HR Admin', 'Manager']}>
+            <MainLayout>
+              <HRAnalytics />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/reports"
+        element={
+          <ProtectedRoute allowedRoles={['HR Admin', 'Manager']}>
+            <MainLayout>
+              <ReportsHub />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/transformation"
+        element={
+          <ProtectedRoute allowedRoles={['HR Admin', 'Manager']}>
+            <MainLayout>
+              <Transformation />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/effectiveness"
+        element={
+          <ProtectedRoute allowedRoles={['HR Admin', 'Manager']}>
+            <MainLayout>
+              <Effectiveness />
             </MainLayout>
           </ProtectedRoute>
         }
