@@ -1,19 +1,23 @@
+
 services:
   - type: web
     name: hris-enterprise-portal
     runtime: node
     plan: free
     region: oregon
+
     buildCommand: npm run render-build
     startCommand: npm start
+
     healthCheckPath: /api/health
     autoDeploy: true
+
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000
+
       - key: JWT_SECRET
         generateValue: true
+
       - key: MONGODB_URI
-        value: mongodb+srv://nuruddinhowladerashiq_db_user:Ashiq12345@cluster0.rqh2tbb.mongodb.net/HRIS_Production?retryWrites=true&w=majority&appName=Cluster0
+        sync: false
