@@ -85,7 +85,7 @@ const AppRoutes = () => {
       />
 
       <Route
-        path="/users"
+        path="/employees"
         element={
           <ProtectedRoute allowedRoles={['HR Admin', 'Manager']}>
             <MainLayout>
@@ -94,9 +94,11 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+      {/* Legacy URI compatibility alias */}
+      <Route path="/users" element={<Navigate to="/employees" replace />} />
 
       <Route
-        path="/leaves"
+        path="/leave-management"
         element={
           <ProtectedRoute>
             <MainLayout>
@@ -105,6 +107,8 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+      {/* Legacy URI compatibility alias */}
+      <Route path="/leaves" element={<Navigate to="/leave-management" replace />} />
 
       <Route
         path="/attendance"
@@ -184,7 +188,7 @@ const AppRoutes = () => {
       />
 
       <Route
-        path="/transformation"
+        path="/digital-transformation"
         element={
           <ProtectedRoute allowedRoles={['HR Admin', 'Manager']}>
             <MainLayout>
@@ -193,9 +197,11 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+      {/* Legacy URI compatibility alias */}
+      <Route path="/transformation" element={<Navigate to="/digital-transformation" replace />} />
 
       <Route
-        path="/effectiveness"
+        path="/hris-effectiveness"
         element={
           <ProtectedRoute allowedRoles={['HR Admin', 'Manager']}>
             <MainLayout>
@@ -204,6 +210,8 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+      {/* Legacy URI compatibility alias */}
+      <Route path="/effectiveness" element={<Navigate to="/hris-effectiveness" replace />} />
 
       <Route
         path="/notifications"

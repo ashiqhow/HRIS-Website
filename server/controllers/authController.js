@@ -19,9 +19,12 @@ const generateToken = (id) => {
 const getSetupStatus = async (req, res) => {
   try {
     const userCount = await User.countDocuments();
+    const adminCount = await User.countDocuments({ role: 'HR Admin' });
     res.json({
       success: true,
-      isFirstUser: userCount === 0,
+      isFirstUser: adminCount === 0,
+      adminExists: adminCount >= 1,
+      adminCount,
       totalUsers: userCount,
     });
   } catch (err) {
@@ -52,11 +55,17 @@ const register = async (req, res) => {
     }
 
     const totalUsers = await User.countDocuments();
+    const adminCount = await User.countDocuments({ role: 'HR Admin' });
     let assignedRole = role || 'Employee';
 
-    // If this is the very first user in the database, automatically make them HR Admin
-    if (totalUsers === 0) {
+    // If there is no HR Admin in the organization, this user is promoted to the single Master HR Admin
+    if (adminCount === 0) {
       assignedRole = 'HR Admin';
+    } else if (assignedRole === 'HR Admin') {
+      return res.status(400).json({
+        success: false,
+        message: 'The organization is limited to exactly 1 Master HR Administrator (Admin Count = 1). Please register as an Employee or Manager.',
+      });
     }
 
     const user = await User.create({
@@ -64,6 +73,7 @@ const register = async (req, res) => {
       email: email.toLowerCase(),
       password,
       role: assignedRole,
+      employeeId: assignedRole === 'HR Admin' ? '1' : undefined,
       department: department || (assignedRole === 'HR Admin' ? 'Human Resources' : 'General'),
       designation: designation || (assignedRole === 'HR Admin' ? 'Chief HR Administrator' : 'Team Member'),
     });

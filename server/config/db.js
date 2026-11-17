@@ -4,17 +4,18 @@ let mongoMemoryServer = null;
 
 const connectDB = async () => {
   const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/hris_db';
+  const maskedUri = uri.replace(/:([^:@]{3})[^:@]*@/, ':****@');
 
   try {
     // Attempt connecting to the configured MongoDB URI with a short timeout
-    console.log(`[MongoDB] Connecting to MongoDB at: ${uri}...`);
+    console.log(`[MongoDB] Connecting to enterprise database at: ${maskedUri}...`);
     await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 3000,
+      serverSelectionTimeoutMS: 2000,
     });
-    console.log('✅ [MongoDB] Connected successfully to configured MongoDB database.');
+    console.log('✅ [MongoDB] Connected successfully to enterprise MongoDB database cluster.');
   } catch (err) {
-    console.warn(`⚠️ [MongoDB] Could not connect to external MongoDB server (${err.message}).`);
-    console.log('🔄 [MongoDB] Initializing Embedded In-Memory MongoDB Server for instant local operation...');
+    console.warn(`⚠️ [MongoDB] Could not reach external cluster (${err.message}).`);
+    console.log('🔄 [MongoDB] Launching High-Performance In-Memory MongoDB Server for instant local operation...');
 
     try {
       const { MongoMemoryServer } = require('mongodb-memory-server');

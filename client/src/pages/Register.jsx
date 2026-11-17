@@ -209,12 +209,11 @@ const Register = () => {
                     className="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white transition disabled:bg-slate-100 disabled:text-purple-700 font-medium"
                   >
                     {isFirstUser ? (
-                      <option value="HR Admin">HR Admin (Master)</option>
+                      <option value="HR Admin">Master HR Administrator (Admin #1)</option>
                     ) : (
                       <>
-                        <option value="Employee">Employee</option>
-                        <option value="Manager">Manager</option>
-                        <option value="HR Admin">HR Admin</option>
+                        <option value="Employee">Employee (Self-Service)</option>
+                        <option value="Manager">Department Manager</option>
                       </>
                     )}
                   </select>

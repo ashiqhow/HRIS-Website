@@ -40,7 +40,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     },
     {
       label: 'Employee Directory',
-      to: '/users',
+      to: '/employees',
       icon: ShieldCheck,
       badge: 'HR Only',
       visible: isHRAdmin || (isManager && user?.permissions?.canManageUsers),
@@ -54,7 +54,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     },
     {
       label: 'Leaves & Time Off',
-      to: '/leaves',
+      to: '/leave-management',
       icon: CalendarDays,
       badge: null,
       visible: true,
@@ -105,14 +105,14 @@ const Sidebar = ({ isOpen, onClose }) => {
     },
     {
       label: 'Transformation Analysis',
-      to: '/transformation',
+      to: '/digital-transformation',
       icon: Zap,
       badge: null,
       visible: isHRAdmin || isManager,
     },
     {
       label: 'HRIS Effectiveness',
-      to: '/effectiveness',
+      to: '/hris-effectiveness',
       icon: Sparkles,
       badge: 'Audit',
       badgeColor: 'bg-purple-500/20 text-purple-300 border border-purple-500/30',

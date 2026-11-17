@@ -108,7 +108,7 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// Auto-assign permissions and employeeId before saving
+// Auto-assign permissions, enforce single-admin policy, and employeeId before saving
 userSchema.pre('save', async function () {
   // Hash password if modified
   if (this.isModified('password')) {
@@ -116,11 +116,34 @@ userSchema.pre('save', async function () {
     this.password = await bcrypt.hash(this.password, salt);
   }
 
+  // Enforce single Master HR Admin constraint (admin count must be 1)
+  if (this.role === 'HR Admin' && (this.isNew || this.isModified('role'))) {
+    const existingAdmin = await this.constructor.findOne({
+      role: 'HR Admin',
+      _id: { $ne: this._id },
+    });
+    if (existingAdmin) {
+      const err = new Error(
+        'The system is restricted to exactly 1 Master HR Administrator (Admin Count = 1). An HR Admin account already exists.'
+      );
+      err.status = 400;
+      throw err;
+    }
+    // HR Admin is ID #1
+    if (!this.employeeId) {
+      this.employeeId = '1';
+    }
+  }
+
   // Generate employeeId if not present
   if (!this.employeeId) {
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const prefix = this.role === 'HR Admin' ? 'HRA' : this.role === 'Manager' ? 'MGR' : 'EMP';
-    this.employeeId = `${prefix}-${randomSuffix}`;
+    if (this.role === 'HR Admin') {
+      this.employeeId = '1';
+    } else {
+      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+      const prefix = this.role === 'Manager' ? 'MGR' : 'EMP';
+      this.employeeId = `${prefix}-${randomSuffix}`;
+    }
   }
 
   // Ensure role-appropriate default permissions

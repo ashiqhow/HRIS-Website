@@ -127,6 +127,17 @@ const updateUserRoleAndAccess = async (req, res) => {
       profile,
     } = req.body;
 
+    // Enforce single Master HR Admin policy (Admin Count = 1)
+    if (role === 'HR Admin' && oldRole !== 'HR Admin') {
+      const existingAdmin = await User.findOne({ role: 'HR Admin', _id: { $ne: user._id } });
+      if (existingAdmin) {
+        return res.status(400).json({
+          success: false,
+          message: 'The organization is limited to exactly 1 Master HR Administrator (Admin Count = 1). An HR Admin account already exists.',
+        });
+      }
+    }
+
     // Professional & Identity Information
     if (name) user.name = name;
     if (email) user.email = email.toLowerCase();
@@ -233,6 +244,17 @@ const createUserByAdmin = async (req, res) => {
         success: false,
         message: 'A user with this email already exists',
       });
+    }
+
+    // Enforce single Master HR Admin policy (Admin Count = 1)
+    if (role === 'HR Admin') {
+      const existingAdmin = await User.findOne({ role: 'HR Admin' });
+      if (existingAdmin) {
+        return res.status(400).json({
+          success: false,
+          message: 'The system is restricted to a single Master HR Administrator (Admin Count = 1). You cannot create another HR Admin account.',
+        });
+      }
     }
 
     const user = new User({

@@ -837,9 +837,17 @@ const UsersManagement = () => {
                     onChange={(e) => handleRoleChange(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   >
-                    <option value="HR Admin">HR Admin (Master)</option>
-                    <option value="Manager">Manager (Team Leader)</option>
-                    <option value="Employee">Employee (Self-Service)</option>
+                    {editingUser?.role === 'HR Admin' ? (
+                      <option value="HR Admin">Master HR Administrator (Admin #1)</option>
+                    ) : (
+                      <>
+                        <option value="Manager">Manager (Team Leader)</option>
+                        <option value="Employee">Employee (Self-Service)</option>
+                        <option value="HR Admin" disabled>
+                          HR Admin (1 Master Admin Limit)
+                        </option>
+                      </>
+                    )}
                   </select>
                 </div>
 
@@ -1197,9 +1205,8 @@ const UsersManagement = () => {
                     onChange={(e) => setNewUserData((prev) => ({ ...prev, role: e.target.value }))}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
                   >
-                    <option value="Employee">Employee</option>
-                    <option value="Manager">Manager</option>
-                    <option value="HR Admin">HR Admin</option>
+                    <option value="Employee">Employee (Self-Service)</option>
+                    <option value="Manager">Department Manager</option>
                   </select>
                 </div>
 
