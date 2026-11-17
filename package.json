@@ -1,0 +1,23 @@
+{
+  "name": "hris-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HRIS - Human Resource Information System (MERN Stack)",
+  "scripts": {
+    "server": "npm --prefix server start",
+    "client": "npm --prefix client dev",
+    "build": "npm --prefix client run build",
+    "dev:server": "npm --prefix server start",
+    "dev:client": "npm --prefix client dev"
+  },
+  "keywords": [
+    "hris",
+    "mern",
+    "react",
+    "express",
+    "mongodb",
+    "nodejs"
+  ],
+  "author": "",
+  "license": "ISC"
+}
