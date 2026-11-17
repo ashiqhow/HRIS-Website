@@ -237,7 +237,64 @@ node HRIS-Website/server/test-module2.js
 
 # Run Module 3 Integration Tests (Analytics, Reports, Transformation, Effectiveness)
 node HRIS-Website/server/test-module3.js
+
+# Verify Single Admin (Admin = 1) Enforcement
+node HRIS-Website/server/test-single-admin.js
 ```
+
+---
+
+## ☁️ Deploy to Render (Production Cloud Hosting)
+
+This application is ready for seamless, zero-downtime deployment on [Render](https://render.com) using either the **Render Blueprint (1-Click)** or as a **Manual Web Service**.
+
+### Option A: 1-Click Blueprint Deployment (Recommended)
+1. Push your repository to GitHub: `https://github.com/ashiqhow/HRIS-Website`
+2. Log into the [Render Dashboard](https://dashboard.render.com).
+3. Click **New +** and select **Blueprint**.
+4. Connect your GitHub repository: `ashiqhow/HRIS-Website`.
+5. Render will automatically detect [`render.yaml`](file:///c:/HRIS/HRIS-Website/render.yaml) and configure:
+   - **Service Name**: `hris-enterprise-portal`
+   - **Environment**: `Node`
+   - **Build Command**: `npm run render-build`
+   - **Start Command**: `npm start`
+   - **Health Check**: `/api/health`
+6. Under **Environment Variables**, provide your `MONGODB_URI` (from free [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)):
+   ```env
+   MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.your-cluster.mongodb.net/HRIS_Production?retryWrites=true&w=majority
+   ```
+7. Click **Apply**. Render will install all dependencies, build the React frontend, and deploy the full-stack portal with a free SSL certificate!
+
+---
+
+### Option B: Manual Web Service Deployment
+1. In [Render Dashboard](https://dashboard.render.com), click **New +** $\rightarrow$ **Web Service**.
+2. Select **Build and deploy from a Git repository** and connect `ashiqhow/HRIS-Website`.
+3. Configure the following service settings:
+   - **Name**: `hris-portal`
+   - **Region**: Oregon (US West) or closest to you
+   - **Branch**: `main`
+   - **Root Directory**: *(leave blank)*
+   - **Runtime**: `Node`
+   - **Build Command**: `npm run render-build`
+   - **Start Command**: `npm start`
+   - **Plan**: `Free`
+4. Add the following **Environment Variables**:
+   | Variable | Value | Description |
+   |---|---|---|
+   | `NODE_ENV` | `production` | Enables production mode and frontend static serving |
+   | `PORT` | `10000` | Port automatically mapped by Render |
+   | `JWT_SECRET` | *(click 'Generate' or enter strong random string)* | Secret key for signing user auth tokens |
+   | `MONGODB_URI` | `mongodb+srv://...` | MongoDB Atlas database connection string |
+5. Click **Create Web Service**.
+
+---
+
+### 🌐 Live Verification on Render
+Once deployment status shows **Live**:
+- **Web App**: Open `https://<your-subdomain>.onrender.com/` in your browser.
+- **Health Check**: Open `https://<your-subdomain>.onrender.com/api/health` to confirm server status.
+- **Initial Setup**: The first user to register on your live deployment will automatically be granted the **Master HR Admin** role with **Employee ID: `1`**. Subsequent registrations will only be allowed as standard staff or managers.
 
 ---
 

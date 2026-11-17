@@ -1,14 +1,14 @@
 {
-  "name": "hris-monorepo",
+  "name": "hris-portal-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "HRIS - Human Resource Information System (MERN Stack)",
+  "description": "HRIS - Enterprise Human Resource Information System (MERN Stack)",
   "scripts": {
+    "render-build": "npm install --prefix server && npm install --prefix client && npm run build --prefix client",
+    "build": "npm run build --prefix client",
+    "start": "node server/server.js",
     "server": "npm --prefix server start",
-    "client": "npm --prefix client dev",
-    "build": "npm --prefix client run build",
-    "dev:server": "npm --prefix server start",
-    "dev:client": "npm --prefix client dev"
+    "client": "npm --prefix client dev"
   },
   "keywords": [
     "hris",
@@ -16,8 +16,12 @@
     "react",
     "express",
     "mongodb",
-    "nodejs"
+    "nodejs",
+    "render"
   ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "author": "",
   "license": "ISC"
 }

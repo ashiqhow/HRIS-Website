@@ -1,4 +1,6 @@
 require('dotenv').config();
+const path = require('path');
+const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
@@ -62,14 +64,37 @@ app.get('/api/health', (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     service: 'HRIS-Backend',
+    environment: process.env.NODE_ENV || 'development',
   });
 });
 
-// 404 Handler
-app.use((req, res, next) => {
+// Serve frontend static files in production
+const clientDistPath = path.join(__dirname, '../client/dist');
+if (process.env.NODE_ENV === 'production' || fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+
+  // Client-side SPA routing fallback
+  app.get('*', (req, res, next) => {
+    if (req.originalUrl.startsWith('/api')) {
+      return next();
+    }
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+}
+
+// 404 Handler for undefined API routes
+app.use('/api/*', (req, res) => {
   res.status(404).json({
     success: false,
     message: `API Route ${req.originalUrl} not found`,
+  });
+});
+
+// General 404 Handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.originalUrl} not found`,
   });
 });
 
