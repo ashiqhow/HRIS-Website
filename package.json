@@ -4,7 +4,7 @@
   "private": true,
   "description": "HRIS - Enterprise Human Resource Information System (MERN Stack)",
   "scripts": {
-    "render-build": "npm install --prefix server && npm install --prefix client && npm run build --prefix client",
+    "render-build": "npm install --prefix server && npm install --include=dev --prefix client && npm run build --prefix client",
     "build": "npm run build --prefix client",
     "start": "node server/server.js",
     "server": "npm --prefix server start",
