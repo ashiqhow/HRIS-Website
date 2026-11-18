@@ -7,7 +7,7 @@ const StatusBadge = ({ status }) => {
 
   if (['approved', 'present', 'active'].includes(normalized)) {
     colorClasses = 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  } else if (['pending', 'late', 'half day'].includes(normalized)) {
+  } else if (['pending', 'late', 'half day', 'pending approval'].includes(normalized)) {
     colorClasses = 'bg-amber-50 text-amber-700 border-amber-200';
   } else if (['rejected', 'absent', 'suspended'].includes(normalized)) {
     colorClasses = 'bg-rose-50 text-rose-700 border-rose-200';

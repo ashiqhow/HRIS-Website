@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const PreApprovedManager = require('../models/PreApprovedManager');
 
 // @desc    Get all users with filtering and search
 // @route   GET /api/users
@@ -267,6 +268,9 @@ const createUserByAdmin = async (req, res) => {
       designation: designation || 'Team Member',
       employmentType: employmentType || 'Full-time',
       dateOfJoining: dateOfJoining ? new Date(dateOfJoining) : Date.now(),
+      status: 'Active',
+      approvedBy: role === 'Manager' ? req.user._id : undefined,
+      approvedAt: role === 'Manager' ? new Date() : undefined,
       salary: {
         baseSalary: salary?.baseSalary ? Number(salary.baseSalary) : 0,
         currency: salary?.currency || 'USD',
@@ -345,10 +349,199 @@ const deleteUser = async (req, res) => {
   }
 };
 
+// @desc    Get pending manager registrations awaiting approval
+// @route   GET /api/users/pending-managers
+// @access  Private (HR Admin)
+const getPendingManagers = async (req, res) => {
+  try {
+    const pendingManagers = await User.find({
+      role: 'Manager',
+      status: 'Pending Approval',
+    })
+      .select('-password')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      count: pendingManagers.length,
+      users: pendingManagers,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// @desc    Approve a pending manager
+// @route   PUT /api/users/:id/approve-manager
+// @access  Private (HR Admin)
+const approveManager = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (user.role !== 'Manager') {
+      return res.status(400).json({ success: false, message: 'User is not a Manager' });
+    }
+
+    user.status = 'Active';
+    user.approvedBy = req.user._id;
+    user.approvedAt = new Date();
+    await user.save();
+
+    await Notification.create({
+      recipient: user._id,
+      title: 'Manager Account Approved!',
+      message: `Congratulations ${user.name}! Your Manager account for the ${user.department} department has been officially approved by the HR Administrator. You now have full access.`,
+      type: 'general',
+      link: '/dashboard',
+      sender: req.user._id,
+    });
+
+    const userResponse = await User.findById(user._id).select('-password');
+    res.json({
+      success: true,
+      message: `Manager ${user.name} has been approved and activated successfully`,
+      user: userResponse,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// @desc    Reject a pending manager
+// @route   PUT /api/users/:id/reject-manager
+// @access  Private (HR Admin)
+const rejectManager = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const { reason } = req.body;
+    user.status = 'Suspended';
+    await user.save();
+
+    await Notification.create({
+      recipient: user._id,
+      title: 'Manager Registration Declined',
+      message: reason
+        ? `Your Manager account registration was declined: ${reason}`
+        : 'Your Manager account registration was declined by the HR Administrator.',
+      type: 'general',
+      link: '/login',
+      sender: req.user._id,
+    });
+
+    res.json({
+      success: true,
+      message: `Manager ${user.name}'s request has been rejected and suspended`,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// @desc    Pre-approve a manager email before they register
+// @route   POST /api/users/preapproved-managers
+// @access  Private (HR Admin)
+const preApproveManager = async (req, res) => {
+  try {
+    const { email, department, designation, notes } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    const existingUser = await User.findOne({ email: cleanEmail });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: `A user with email ${cleanEmail} already exists (Role: ${existingUser.role}, Status: ${existingUser.status})`,
+      });
+    }
+
+    const existingPre = await PreApprovedManager.findOne({
+      email: cleanEmail,
+      used: false,
+    });
+    if (existingPre) {
+      return res.status(400).json({
+        success: false,
+        message: 'This email is already pre-approved for Manager access',
+      });
+    }
+
+    const pre = await PreApprovedManager.create({
+      email: cleanEmail,
+      department: department || 'Engineering',
+      designation: designation || 'Department Manager',
+      approvedBy: req.user._id,
+      notes: notes || 'Pre-approved by HR Administrator',
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Manager email ${cleanEmail} has been pre-approved! They can now create their account directly.`,
+      preApproval: pre,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// @desc    Get all pre-approved manager emails
+// @route   GET /api/users/preapproved-managers
+// @access  Private (HR Admin)
+const getPreApprovedManagers = async (req, res) => {
+  try {
+    const preApproved = await PreApprovedManager.find({ used: false })
+      .populate('approvedBy', 'name email')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      count: preApproved.length,
+      preApproved,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// @desc    Revoke a pre-approval
+// @route   DELETE /api/users/preapproved-managers/:id
+// @access  Private (HR Admin)
+const revokePreApprovedManager = async (req, res) => {
+  try {
+    const pre = await PreApprovedManager.findById(req.params.id);
+    if (!pre) {
+      return res.status(404).json({ success: false, message: 'Pre-approval record not found' });
+    }
+
+    await PreApprovedManager.findByIdAndDelete(req.params.id);
+    res.json({
+      success: true,
+      message: `Pre-approval for ${pre.email} revoked successfully`,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
   updateUserRoleAndAccess,
   createUserByAdmin,
   deleteUser,
+  getPendingManagers,
+  approveManager,
+  rejectManager,
+  preApproveManager,
+  getPreApprovedManagers,
+  revokePreApprovedManager,
 };

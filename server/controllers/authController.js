@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const PreApprovedManager = require('../models/PreApprovedManager');
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -68,6 +69,32 @@ const register = async (req, res) => {
       });
     }
 
+    // Manager approval verification
+    let userStatus = 'Active';
+    let approvedBy = null;
+    let approvedAt = null;
+
+    if (assignedRole === 'Manager') {
+      // Check if HR Admin pre-approved this email
+      const preApproval = await PreApprovedManager.findOne({
+        email: email.toLowerCase(),
+        used: false,
+      });
+
+      if (preApproval) {
+        // Pre-approved by HR Admin: activate account immediately
+        userStatus = 'Active';
+        approvedBy = preApproval.approvedBy;
+        approvedAt = new Date();
+        preApproval.used = true;
+        preApproval.usedAt = new Date();
+        await preApproval.save();
+      } else {
+        // Not pre-approved: Manager account must be approved by HR Admin before login
+        userStatus = 'Pending Approval';
+      }
+    }
+
     const user = await User.create({
       name,
       email: email.toLowerCase(),
@@ -76,9 +103,42 @@ const register = async (req, res) => {
       employeeId: assignedRole === 'HR Admin' ? '1' : undefined,
       department: department || (assignedRole === 'HR Admin' ? 'Human Resources' : 'General'),
       designation: designation || (assignedRole === 'HR Admin' ? 'Chief HR Administrator' : 'Team Member'),
+      status: userStatus,
+      approvedBy,
+      approvedAt,
     });
 
-    // Welcome Notification
+    // If Manager requires approval, notify the Master HR Admin
+    if (userStatus === 'Pending Approval') {
+      const hrAdmin = await User.findOne({ role: 'HR Admin' });
+      if (hrAdmin) {
+        await Notification.create({
+          recipient: hrAdmin._id,
+          title: 'Manager Approval Required',
+          message: `${user.name} has registered for the role of Manager in the ${user.department} department. Admin review and approval is required.`,
+          type: 'general',
+          link: '/employees',
+          sender: user._id,
+        });
+      }
+
+      return res.status(201).json({
+        success: true,
+        requiresApproval: true,
+        message:
+          'Manager registration submitted! Your account requires approval by the HR Administrator before you can log in. The HR Admin has been notified.',
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          department: user.department,
+          status: user.status,
+        },
+      });
+    }
+
+    // Welcome Notification for immediately activated accounts
     await Notification.create({
       recipient: user._id,
       title: 'Welcome to HRIS Portal',
@@ -138,6 +198,14 @@ const login = async (req, res) => {
     }
 
     if (user.status !== 'Active') {
+      if (user.status === 'Pending Approval') {
+        return res.status(403).json({
+          success: false,
+          isPendingApproval: true,
+          message:
+            'Your Manager account is currently pending review and approval by the HR Administrator. You will be able to log in once authorized.',
+        });
+      }
       return res.status(403).json({
         success: false,
         message: `Your account status is ${user.status}. Please contact the HR department.`,
@@ -156,6 +224,30 @@ const login = async (req, res) => {
     });
   } catch (err) {
     console.error('Login Error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// @desc    Check if an email is pre-approved for Manager role
+// @route   GET /api/auth/check-preapproval
+// @access  Public
+const checkPreApproval = async (req, res) => {
+  try {
+    const { email } = req.query;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email required' });
+    }
+    const preApproval = await PreApprovedManager.findOne({
+      email: email.toLowerCase(),
+      used: false,
+    });
+    res.json({
+      success: true,
+      isPreApproved: !!preApproval,
+      department: preApproval?.department || null,
+      designation: preApproval?.designation || null,
+    });
+  } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -179,5 +271,6 @@ module.exports = {
   getSetupStatus,
   register,
   login,
+  checkPreApproval,
   getMe,
 };

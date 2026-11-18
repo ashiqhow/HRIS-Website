@@ -24,6 +24,12 @@ import {
   CreditCard,
   Briefcase,
   HeartPulse,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  UserCheck,
+  Send,
+  Sparkles,
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -128,6 +134,127 @@ const UsersManagement = () => {
   const [feedback, setFeedback] = useState({ type: '', message: '' });
 
   const isHRAdmin = currentUser?.role === 'HR Admin' || currentUser?.permissions?.canManageUsers;
+
+  // Manager Approval & Pre-approval States
+  const [activeTab, setActiveTab] = useState('directory'); // 'directory' | 'pending' | 'preapproved'
+  const [pendingManagers, setPendingManagers] = useState([]);
+  const [loadingPending, setLoadingPending] = useState(false);
+  const [preApprovedManagers, setPreApprovedManagers] = useState([]);
+  const [loadingPreApproved, setLoadingPreApproved] = useState(false);
+  const [showPreApproveModal, setShowPreApproveModal] = useState(false);
+  const [preApproveFormData, setPreApproveFormData] = useState({
+    email: '',
+    department: 'Engineering',
+    designation: 'Department Manager',
+    notes: '',
+  });
+  const [rejectModal, setRejectModal] = useState({ open: false, user: null, reason: '' });
+
+  const fetchPendingManagers = async () => {
+    if (!isHRAdmin) return;
+    try {
+      setLoadingPending(true);
+      const res = await api.get('/users/pending-managers');
+      if (res.data.success) {
+        setPendingManagers(res.data.users);
+      }
+    } catch (err) {
+      console.error('Failed to fetch pending managers:', err);
+    } finally {
+      setLoadingPending(false);
+    }
+  };
+
+  const fetchPreApprovedManagers = async () => {
+    if (!isHRAdmin) return;
+    try {
+      setLoadingPreApproved(true);
+      const res = await api.get('/users/preapproved-managers');
+      if (res.data.success) {
+        setPreApprovedManagers(res.data.preApproved);
+      }
+    } catch (err) {
+      console.error('Failed to fetch preapproved managers:', err);
+    } finally {
+      setLoadingPreApproved(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isHRAdmin) {
+      fetchPendingManagers();
+      fetchPreApprovedManagers();
+    }
+  }, [isHRAdmin]);
+
+  const handleApproveManager = async (id, name) => {
+    try {
+      setSaving(true);
+      const res = await api.put(`/users/${id}/approve-manager`);
+      setFeedback({ type: 'success', message: res.data.message || `Manager ${name} approved successfully!` });
+      setTimeout(() => setFeedback({ type: '', message: '' }), 4000);
+      fetchPendingManagers();
+      fetchUsers();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to approve manager');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRejectManager = async () => {
+    if (!rejectModal.user) return;
+    try {
+      setSaving(true);
+      const res = await api.put(`/users/${rejectModal.user._id}/reject-manager`, {
+        reason: rejectModal.reason,
+      });
+      setFeedback({ type: 'success', message: res.data.message || 'Manager request declined.' });
+      setTimeout(() => setFeedback({ type: '', message: '' }), 4000);
+      setRejectModal({ open: false, user: null, reason: '' });
+      fetchPendingManagers();
+      fetchUsers();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to decline manager');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePreApproveManager = async (e) => {
+    e.preventDefault();
+    try {
+      setSaving(true);
+      const res = await api.post('/users/preapproved-managers', preApproveFormData);
+      setFeedback({ type: 'success', message: res.data.message || 'Manager email pre-approved successfully!' });
+      setTimeout(() => setFeedback({ type: '', message: '' }), 4000);
+      setShowPreApproveModal(false);
+      setPreApproveFormData({
+        email: '',
+        department: 'Engineering',
+        designation: 'Department Manager',
+        notes: '',
+      });
+      fetchPreApprovedManagers();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to pre-approve manager');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRevokePreApproval = async (id, email) => {
+    if (window.confirm(`Are you sure you want to revoke pre-approval for ${email}?`)) {
+      try {
+        await api.delete(`/users/preapproved-managers/${id}`);
+        setFeedback({ type: 'success', message: `Pre-approval for ${email} revoked.` });
+        setTimeout(() => setFeedback({ type: '', message: '' }), 4000);
+        fetchPreApprovedManagers();
+      } catch (err) {
+        alert(err.response?.data?.message || 'Failed to revoke pre-approval');
+      }
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -399,199 +526,503 @@ const UsersManagement = () => {
         </div>
       )}
 
-      {/* Filter and Search Bar: Name, ID, Department, Designation, Role, Status */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-        {/* Search by Name, Email, or ID */}
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, email, ID..."
-            className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white"
-          />
-        </div>
-
-        {/* Filter by Designation */}
-        <div>
-          <input
-            type="text"
-            value={designationFilter}
-            onChange={(e) => setDesignationFilter(e.target.value)}
-            placeholder="Filter by Designation..."
-            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          />
-        </div>
-
-        {/* Department Filter (HR Admin can filter all, Manager is scoped to their department) */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-slate-400 font-medium">Dept:</span>
-          <select
-            value={selectedDept}
-            onChange={(e) => setSelectedDept(e.target.value)}
-            disabled={!isHRAdmin}
-            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:bg-slate-100"
-          >
-            {departments.map((d) => (
-              <option key={d} value={d}>
-                {d === 'All' ? 'All Departments' : d}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Role Filter */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-slate-400 font-medium">Role:</span>
-          <select
-            value={selectedRole}
-            onChange={(e) => setSelectedRole(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          >
-            {roles.map((r) => (
-              <option key={r} value={r}>
-                {r === 'All' ? 'All Roles' : r}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Status Filter */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-slate-400 font-medium">Status:</span>
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          >
-            <option value="All">All Statuses</option>
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-            <option value="Suspended">Suspended</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Central Employee Records Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center text-xs text-slate-400">Loading digital workforce directory...</div>
-        ) : users.length === 0 ? (
-          <div className="p-10 text-center text-slate-400 text-xs">
-            <User className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-            No employee records match the search or filter parameters.
+      {/* Pending Manager Approvals Callout Banner */}
+      {isHRAdmin && pendingManagers.length > 0 && activeTab !== 'pending' && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-amber-900 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0 text-amber-700">
+              <Clock className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <p className="font-bold text-sm text-amber-950">
+                {pendingManagers.length} Manager Registration{pendingManagers.length > 1 ? 's' : ''} Awaiting Approval
+              </p>
+              <p className="text-xs text-amber-800">
+                Department managers registered through the portal cannot sign in until you verify and activate their account.
+              </p>
+            </div>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-500 border-b border-slate-100 uppercase tracking-wider">
-                <tr>
-                  <th className="py-3 px-4">Employee Information</th>
-                  <th className="py-3 px-4">Role & Access</th>
-                  <th className="py-3 px-4">Department & Designation</th>
-                  <th className="py-3 px-4">Joining Date</th>
-                  {isHRAdmin && <th className="py-3 px-4">Salary Information</th>}
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {users.map((u) => (
-                  <tr key={u._id} className="hover:bg-slate-50/60 transition">
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-700 font-bold flex items-center justify-center text-xs shadow-sm">
-                          {u.name.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-900 hover:text-sky-600 cursor-pointer" onClick={() => setViewingUser(u)}>
-                            {u.name}
-                          </p>
-                          <p className="text-[11px] text-slate-400">{u.email}</p>
-                          <span className="text-[10px] text-sky-700 bg-sky-50 px-1.5 py-0.2 rounded font-mono font-medium">
-                            {u.employeeId}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
+          <button
+            onClick={() => setActiveTab('pending')}
+            className="self-start sm:self-auto px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-sm transition whitespace-nowrap"
+          >
+            Review Manager Requests ({pendingManagers.length})
+          </button>
+        </div>
+      )}
 
-                    <td className="py-3.5 px-4">
-                      <RoleBadge role={u.role} size="sm" />
-                    </td>
+      {/* Tabs Navigation for HR Admin */}
+      {isHRAdmin && (
+        <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+          <button
+            onClick={() => setActiveTab('directory')}
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition ${
+              activeTab === 'directory'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <User className="w-4 h-4" />
+            <span>Workforce Directory</span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] ${
+                activeTab === 'directory' ? 'bg-slate-800 text-slate-200' : 'bg-slate-200 text-slate-700'
+              }`}
+            >
+              {users.length}
+            </span>
+          </button>
 
-                    <td className="py-3.5 px-4">
-                      <p className="font-semibold text-slate-800">{u.designation}</p>
-                      <p className="text-[11px] text-slate-500">{u.department}</p>
-                    </td>
+          <button
+            onClick={() => setActiveTab('pending')}
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition ${
+              activeTab === 'pending'
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Clock className="w-4 h-4" />
+            <span>Pending Manager Approvals</span>
+            {pendingManagers.length > 0 && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-900 animate-pulse">
+                {pendingManagers.length}
+              </span>
+            )}
+          </button>
 
-                    <td className="py-3.5 px-4 text-slate-600">
-                      {new Date(u.dateOfJoining || u.createdAt).toLocaleDateString([], {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                      <span className="block text-[10px] text-slate-400">{u.employmentType || 'Full-time'}</span>
-                    </td>
+          <button
+            onClick={() => setActiveTab('preapproved')}
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition ${
+              activeTab === 'preapproved'
+                ? 'bg-sky-600 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>Pre-Approved Manager Invites</span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] ${
+                activeTab === 'preapproved' ? 'bg-sky-700 text-sky-100' : 'bg-slate-200 text-slate-700'
+              }`}
+            >
+              {preApprovedManagers.length}
+            </span>
+          </button>
+        </div>
+      )}
 
-                    {isHRAdmin && (
-                      <td className="py-3.5 px-4">
-                        {u.salary?.baseSalary > 0 ? (
-                          <div>
-                            <span className="font-bold text-slate-900 font-mono">
-                              {u.salary.currency || 'USD'} {Number(u.salary.baseSalary).toLocaleString()}
-                            </span>
-                            <span className="block text-[10px] text-slate-400">/{u.salary.payFrequency || 'Monthly'}</span>
+      {/* Directory Tab View */}
+      {activeTab === 'directory' && (
+        <>
+          {/* Filter and Search Bar: Name, ID, Department, Designation, Role, Status */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            {/* Search by Name, Email, or ID */}
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by name, email, ID..."
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white"
+              />
+            </div>
+
+            {/* Filter by Designation */}
+            <div>
+              <input
+                type="text"
+                value={designationFilter}
+                onChange={(e) => setDesignationFilter(e.target.value)}
+                placeholder="Filter by Designation..."
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              />
+            </div>
+
+            {/* Department Filter (HR Admin can filter all, Manager is scoped to their department) */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-slate-400 font-medium">Dept:</span>
+              <select
+                value={selectedDept}
+                onChange={(e) => setSelectedDept(e.target.value)}
+                disabled={!isHRAdmin}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:bg-slate-100"
+              >
+                {departments.map((d) => (
+                  <option key={d} value={d}>
+                    {d === 'All' ? 'All Departments' : d}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Role Filter */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-slate-400 font-medium">Role:</span>
+              <select
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              >
+                {roles.map((r) => (
+                  <option key={r} value={r}>
+                    {r === 'All' ? 'All Roles' : r}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Status Filter */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-slate-400 font-medium">Status:</span>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              >
+                <option value="All">All Statuses</option>
+                <option value="Active">Active</option>
+                <option value="Pending Approval">Pending Approval</option>
+                <option value="Inactive">Inactive</option>
+                <option value="Suspended">Suspended</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Central Employee Records Table */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            {loading ? (
+              <div className="p-8 text-center text-xs text-slate-400">Loading digital workforce directory...</div>
+            ) : users.length === 0 ? (
+              <div className="p-10 text-center text-slate-400 text-xs">
+                <User className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                No employee records match the search or filter parameters.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-500 border-b border-slate-100 uppercase tracking-wider">
+                    <tr>
+                      <th className="py-3 px-4">Employee Information</th>
+                      <th className="py-3 px-4">Role & Access</th>
+                      <th className="py-3 px-4">Department & Designation</th>
+                      <th className="py-3 px-4">Joining Date</th>
+                      {isHRAdmin && <th className="py-3 px-4">Salary Information</th>}
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {users.map((u) => (
+                      <tr key={u._id} className="hover:bg-slate-50/60 transition">
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-700 font-bold flex items-center justify-center text-xs shadow-sm">
+                              {u.name.charAt(0)}
+                            </div>
+                            <div>
+                              <p
+                                className="font-bold text-slate-900 hover:text-sky-600 cursor-pointer"
+                                onClick={() => setViewingUser(u)}
+                              >
+                                {u.name}
+                              </p>
+                              <p className="text-[11px] text-slate-400">{u.email}</p>
+                              <span className="text-[10px] text-sky-700 bg-sky-50 px-1.5 py-0.2 rounded font-mono font-medium">
+                                {u.employeeId}
+                              </span>
+                            </div>
                           </div>
-                        ) : (
-                          <span className="text-slate-400 italic">Not configured</span>
-                        )}
-                      </td>
-                    )}
+                        </td>
 
-                    <td className="py-3.5 px-4">
-                      <StatusBadge status={u.status} />
-                    </td>
+                        <td className="py-3.5 px-4">
+                          <RoleBadge role={u.role} size="sm" />
+                        </td>
 
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => setViewingUser(u)}
-                          className="p-1.5 text-slate-600 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition"
-                          title="View Digital Employee File"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
+                        <td className="py-3.5 px-4">
+                          <p className="font-semibold text-slate-800">{u.designation}</p>
+                          <p className="text-[11px] text-slate-500">{u.department}</p>
+                        </td>
+
+                        <td className="py-3.5 px-4 text-slate-600">
+                          {new Date(u.dateOfJoining || u.createdAt).toLocaleDateString([], {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                          <span className="block text-[10px] text-slate-400">{u.employmentType || 'Full-time'}</span>
+                        </td>
 
                         {isHRAdmin && (
-                          <>
-                            <button
-                              onClick={() => handleEditClick(u)}
-                              className="p-1.5 text-slate-600 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition"
-                              title="Update Employee Information"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            {currentUser._id !== u._id && (
-                              <button
-                                onClick={() => handleDeleteUser(u._id, u.name)}
-                                className="p-1.5 text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                                title="Delete Employee Record"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                          <td className="py-3.5 px-4">
+                            {u.salary?.baseSalary > 0 ? (
+                              <div>
+                                <span className="font-bold text-slate-900 font-mono">
+                                  {u.salary.currency || 'USD'} {Number(u.salary.baseSalary).toLocaleString()}
+                                </span>
+                                <span className="block text-[10px] text-slate-400">/{u.salary.payFrequency || 'Monthly'}</span>
+                              </div>
+                            ) : (
+                              <span className="text-slate-400 italic">Not configured</span>
                             )}
-                          </>
+                          </td>
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+                        <td className="py-3.5 px-4">
+                          <StatusBadge status={u.status} />
+                        </td>
+
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => setViewingUser(u)}
+                              className="p-1.5 text-slate-600 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition"
+                              title="View Digital Employee File"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+
+                            {isHRAdmin && (
+                              <>
+                                <button
+                                  onClick={() => handleEditClick(u)}
+                                  className="p-1.5 text-slate-600 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition"
+                                  title="Update Employee Information"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </button>
+                                {currentUser._id !== u._id && (
+                                  <button
+                                    onClick={() => handleDeleteUser(u._id, u.name)}
+                                    className="p-1.5 text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                                    title="Delete Employee Record"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
+
+      {/* ========================================================================= */}
+      {/* PENDING MANAGER APPROVALS QUEUE                                           */}
+      {/* ========================================================================= */}
+      {isHRAdmin && activeTab === 'pending' && (
+        <div className="space-y-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+            <Clock className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h2 className="font-bold text-amber-950 text-sm">Manager Account Authorization Queue</h2>
+              <p className="text-xs text-amber-800 mt-0.5 leading-relaxed">
+                Under organizational security policy, managers who register without prior email pre-approval are held in{' '}
+                <span className="font-semibold">Pending Approval</span> status. They cannot log in until you review and authorize their account below.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            {loadingPending ? (
+              <div className="p-8 text-center text-xs text-slate-400">Loading pending requests...</div>
+            ) : pendingManagers.length === 0 ? (
+              <div className="p-12 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <h3 className="font-bold text-slate-800 text-sm">All Manager Registrations Reviewed</h3>
+                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                  There are no pending manager requests in the queue. New manager registrations will appear here for verification.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-500 border-b border-slate-100 uppercase tracking-wider">
+                    <tr>
+                      <th className="py-3 px-4">Manager Candidate</th>
+                      <th className="py-3 px-4">Department & Designation</th>
+                      <th className="py-3 px-4">Registration Date</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4 text-right">HR Admin Decision</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {pendingManagers.map((m) => (
+                      <tr key={m._id} className="hover:bg-amber-50/30 transition">
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-800 font-bold flex items-center justify-center text-xs shadow-sm">
+                              {m.name.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="font-bold text-slate-900">{m.name}</p>
+                              <p className="text-[11px] text-slate-400">{m.email}</p>
+                              {m.employeeId && (
+                                <span className="text-[10px] text-sky-700 bg-sky-50 px-1.5 py-0.2 rounded font-mono font-medium">
+                                  {m.employeeId}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="py-3.5 px-4">
+                          <p className="font-semibold text-slate-800">{m.department}</p>
+                          <p className="text-[11px] text-slate-500">{m.designation || 'Department Manager'}</p>
+                        </td>
+
+                        <td className="py-3.5 px-4 text-slate-600">
+                          {new Date(m.createdAt).toLocaleDateString([], {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                          <span className="block text-[10px] text-slate-400">
+                            {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </td>
+
+                        <td className="py-3.5 px-4">
+                          <StatusBadge status={m.status} />
+                        </td>
+
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleApproveManager(m._id, m.name)}
+                              disabled={saving}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition disabled:opacity-50"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Approve & Activate</span>
+                            </button>
+                            <button
+                              onClick={() => setRejectModal({ open: true, user: m, reason: '' })}
+                              disabled={saving}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition disabled:opacity-50"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                              <span>Decline</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* PRE-APPROVED MANAGERS INVITES                                            */}
+      {/* ========================================================================= */}
+      {isHRAdmin && activeTab === 'preapproved' && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-sky-50 border border-sky-200 rounded-2xl p-4">
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="w-5 h-5 text-sky-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h2 className="font-bold text-sky-950 text-sm">Pre-Authorized Manager Whitelist</h2>
+                <p className="text-xs text-sky-800 mt-0.5 leading-relaxed">
+                  Pre-approve manager email addresses in advance. When an invited manager registers with a pre-approved email, their account activates instantly with zero delay.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowPreApproveModal(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs rounded-xl shadow-sm transition whitespace-nowrap self-start sm:self-auto"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>Pre-Approve Manager Email</span>
+            </button>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            {loadingPreApproved ? (
+              <div className="p-8 text-center text-xs text-slate-400">Loading pre-approved managers...</div>
+            ) : preApprovedManagers.length === 0 ? (
+              <div className="p-12 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center mx-auto mb-3">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <h3 className="font-bold text-slate-800 text-sm">No Active Pre-Approvals</h3>
+                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                  Click "Pre-Approve Manager Email" to authorize a department manager candidate before they register.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-500 border-b border-slate-100 uppercase tracking-wider">
+                    <tr>
+                      <th className="py-3 px-4">Pre-Approved Email</th>
+                      <th className="py-3 px-4">Assigned Department</th>
+                      <th className="py-3 px-4">Designation</th>
+                      <th className="py-3 px-4">Notes</th>
+                      <th className="py-3 px-4">Pre-Approved Date</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {preApprovedManagers.map((p) => (
+                      <tr key={p._id} className="hover:bg-slate-50/60 transition">
+                        <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
+                          <div className="flex items-center gap-2">
+                            <Mail className="w-3.5 h-3.5 text-sky-600" />
+                            <span>{p.email}</span>
+                          </div>
+                        </td>
+
+                        <td className="py-3.5 px-4">
+                          <span className="font-semibold text-slate-800">{p.department}</span>
+                        </td>
+
+                        <td className="py-3.5 px-4 text-slate-600">
+                          {p.designation || 'Department Manager'}
+                        </td>
+
+                        <td className="py-3.5 px-4 text-slate-500 italic max-w-xs truncate">
+                          {p.notes || '—'}
+                        </td>
+
+                        <td className="py-3.5 px-4 text-slate-500">
+                          {new Date(p.createdAt).toLocaleDateString([], {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                        </td>
+
+                        <td className="py-3.5 px-4 text-right">
+                          <button
+                            onClick={() => handleRevokePreApproval(p._id, p.email)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                            title="Revoke Pre-Approval"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* VIEW CENTRALIZED DIGITAL EMPLOYEE FILE MODAL                              */}
@@ -1347,6 +1778,159 @@ const UsersManagement = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* PRE-APPROVE MANAGER MODAL                                                 */}
+      {/* ========================================================================= */}
+      {showPreApproveModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-fadeIn">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-sky-600" />
+                <h3 className="font-bold text-slate-900 text-sm">Pre-Approve Manager Email</h3>
+              </div>
+              <button
+                onClick={() => setShowPreApproveModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handlePreApproveManager} className="mt-4 space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-1">
+                  Manager Candidate Work Email *
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={preApproveFormData.email}
+                  onChange={(e) => setPreApproveFormData({ ...preApproveFormData, email: e.target.value })}
+                  placeholder="manager.candidate@company.com"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-1">Department *</label>
+                <select
+                  value={preApproveFormData.department}
+                  onChange={(e) => setPreApproveFormData({ ...preApproveFormData, department: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                >
+                  {departments
+                    .filter((d) => d !== 'All')
+                    .map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-1">Designation</label>
+                <input
+                  type="text"
+                  value={preApproveFormData.designation}
+                  onChange={(e) => setPreApproveFormData({ ...preApproveFormData, designation: e.target.value })}
+                  placeholder="e.g. Engineering Manager"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-1">Authorization Notes (Optional)</label>
+                <textarea
+                  rows={2}
+                  value={preApproveFormData.notes}
+                  onChange={(e) => setPreApproveFormData({ ...preApproveFormData, notes: e.target.value })}
+                  placeholder="e.g. Approved by HR Admin after interview round 3"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowPreApproveModal(false)}
+                  className="px-4 py-2 border border-slate-200 text-slate-700 rounded-xl font-semibold hover:bg-slate-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold transition shadow-sm disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Authorize Email'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* REJECT / DECLINE MANAGER MODAL                                            */}
+      {/* ========================================================================= */}
+      {rejectModal.open && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-fadeIn text-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2 text-rose-600">
+                <AlertCircle className="w-5 h-5" />
+                <h3 className="font-bold text-slate-900 text-sm">Decline Manager Registration</h3>
+              </div>
+              <button
+                onClick={() => setRejectModal({ open: false, user: null, reason: '' })}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="mt-3 text-slate-600 leading-relaxed">
+              Are you sure you want to decline Manager access for{' '}
+              <strong className="text-slate-900">{rejectModal.user?.name}</strong> ({rejectModal.user?.email}) for the{' '}
+              <strong className="text-slate-900">{rejectModal.user?.department}</strong> department?
+            </p>
+
+            <div className="mt-3">
+              <label className="block font-bold text-slate-700 uppercase mb-1">
+                Reason for Rejection (Optional)
+              </label>
+              <textarea
+                rows={2}
+                value={rejectModal.reason}
+                onChange={(e) => setRejectModal({ ...rejectModal, reason: e.target.value })}
+                placeholder="e.g. Unverified credentials, please contact HR."
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 mt-4">
+              <button
+                type="button"
+                onClick={() => setRejectModal({ open: false, user: null, reason: '' })}
+                className="px-4 py-2 border border-slate-200 text-slate-700 rounded-xl font-semibold hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleRejectManager}
+                disabled={saving}
+                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold transition shadow-sm disabled:opacity-50"
+              >
+                {saving ? 'Declining...' : 'Confirm Decline'}
+              </button>
+            </div>
           </div>
         </div>
       )}

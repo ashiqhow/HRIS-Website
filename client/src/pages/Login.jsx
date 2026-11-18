@@ -10,6 +10,7 @@ import {
   ArrowRight,
   ShieldCheck,
   CheckCircle2,
+  Clock,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -24,15 +25,20 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isPendingApproval, setIsPendingApproval] = useState(false);
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-    if (error) setError('');
+    if (error) {
+      setError('');
+      setIsPendingApproval(false);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsPendingApproval(false);
 
     if (!formData.email || !formData.password) {
       setError('Please provide both email and password.');
@@ -44,9 +50,15 @@ const Login = () => {
       await login(formData.email, formData.password);
       navigate('/');
     } catch (err) {
-      setError(
-        err.response?.data?.message || 'Login failed. Please check your credentials.'
-      );
+      if (err.response?.data?.isPendingApproval) {
+        setIsPendingApproval(true);
+        setError(err.response?.data?.message);
+      } else {
+        setIsPendingApproval(false);
+        setError(
+          err.response?.data?.message || 'Login failed. Please check your credentials.'
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -71,12 +83,25 @@ const Login = () => {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-6 shadow-2xl rounded-2xl sm:px-10 border border-slate-100">
-          {error && (
+          {error && isPendingApproval ? (
+            <div className="mb-5 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs">
+              <div className="flex items-start gap-2.5">
+                <Clock className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-amber-950 text-sm mb-1">Manager Account Pending Approval</p>
+                  <p className="text-amber-800 leading-relaxed">{error}</p>
+                  <p className="mt-2 text-amber-700">
+                    The Master HR Administrator has been notified to review and authorize your account. Once approved, you can log in directly.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : error ? (
             <div className="mb-5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-3 text-rose-700 text-sm animate-shake">
               <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
-          )}
+          ) : null}
 
           <form className="space-y-5" onSubmit={handleSubmit}>
             <div>

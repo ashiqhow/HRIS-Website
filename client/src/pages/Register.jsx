@@ -13,6 +13,9 @@ import {
   ArrowRight,
   Shield,
   Sparkles,
+  Clock,
+  CheckCircle2,
+  UserCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -47,6 +50,8 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [checkingSetup, setCheckingSetup] = useState(true);
   const [error, setError] = useState('');
+  const [pendingApprovalSuccess, setPendingApprovalSuccess] = useState(null);
+  const [preApprovalNotice, setPreApprovalNotice] = useState(null);
 
   useEffect(() => {
     const checkSetup = async () => {
@@ -70,9 +75,37 @@ const Register = () => {
     checkSetup();
   }, []);
 
+  // Check pre-approval when user enters email
+  const checkEmailPreApproval = async (emailToCheck) => {
+    if (!emailToCheck || !emailToCheck.includes('@')) {
+      setPreApprovalNotice(null);
+      return;
+    }
+    try {
+      const { data } = await api.get(`/auth/check-preapproval?email=${encodeURIComponent(emailToCheck)}`);
+      if (data.success && data.isPreApproved) {
+        setPreApprovalNotice(data);
+        setFormData((prev) => ({
+          ...prev,
+          role: 'Manager',
+          department: data.department || prev.department,
+          designation: data.designation || prev.designation,
+        }));
+      } else {
+        setPreApprovalNotice(null);
+      }
+    } catch {
+      setPreApprovalNotice(null);
+    }
+  };
+
   const handleChange = (e) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
     if (error) setError('');
+    if (name === 'email') {
+      checkEmailPreApproval(value);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -91,7 +124,7 @@ const Register = () => {
 
     try {
       setLoading(true);
-      await register({
+      const res = await register({
         name: formData.name,
         email: formData.email,
         password: formData.password,
@@ -99,7 +132,18 @@ const Register = () => {
         department: formData.department,
         designation: formData.designation,
       });
-      navigate('/');
+
+      if (res?.requiresApproval) {
+        setPendingApprovalSuccess({
+          name: formData.name,
+          email: formData.email,
+          role: formData.role,
+          department: formData.department,
+          message: res.message,
+        });
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       setError(
         err.response?.data?.message || 'Registration failed. Please try again.'
@@ -108,6 +152,57 @@ const Register = () => {
       setLoading(false);
     }
   };
+
+  if (pendingApprovalSuccess) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-sky-950 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-lg">
+          <div className="bg-white py-10 px-6 shadow-2xl rounded-3xl sm:px-10 border border-slate-100 text-center">
+            <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-200">
+              <Clock className="w-9 h-9 text-amber-600 animate-pulse" />
+            </div>
+            <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+              Manager Registration Submitted
+            </h2>
+            <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+              Status: Pending HR Admin Approval
+            </div>
+
+            <p className="mt-4 text-sm text-slate-600 leading-relaxed">
+              Welcome, <span className="font-semibold text-slate-800">{pendingApprovalSuccess.name}</span>. Your registration for the{' '}
+              <span className="font-semibold text-slate-800">{pendingApprovalSuccess.department} Department Manager</span> position has been recorded.
+            </p>
+
+            <div className="mt-6 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left text-xs text-slate-600 space-y-2">
+              <div className="flex items-start gap-2">
+                <Shield className="w-4 h-4 text-sky-600 flex-shrink-0 mt-0.5" />
+                <span>
+                  <strong>Governance Policy:</strong> All Department Manager accounts must be authorized by the Master HR Administrator before initial sign in.
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <UserCheck className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                <span>
+                  An automated notification has been dispatched to the HR Administrator. Once authorized, you can sign in directly with your email and password.
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-8">
+              <Link
+                to="/login"
+                className="w-full inline-flex justify-center items-center gap-2 py-3 px-4 rounded-xl shadow-md text-sm font-semibold text-white bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 transition"
+              >
+                <span>Return to Sign In</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-sky-950 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -194,6 +289,19 @@ const Register = () => {
               </div>
             </div>
 
+            {/* Pre-approval Notification Banner */}
+            {preApprovalNotice && (
+              <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-emerald-900">Pre-Approved Manager Email Detected</p>
+                  <p className="text-emerald-700 mt-0.5">
+                    This email is pre-authorized by HR Admin for {preApprovalNotice.department} {preApprovalNotice.designation || 'Manager'}. Your account will be activated immediately!
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Role & Department (only if not forced first admin) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -238,6 +346,19 @@ const Register = () => {
                 </select>
               </div>
             </div>
+
+            {/* Manager Approval Notice */}
+            {formData.role === 'Manager' && !preApprovalNotice && !isFirstUser && (
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2.5">
+                <Clock className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-amber-900">Admin Authorization Required</p>
+                  <p className="text-amber-700 mt-0.5">
+                    Manager accounts require approval by the HR Administrator before first login. Once registered, the Admin will review and authorize your account.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Designation */}
             <div>

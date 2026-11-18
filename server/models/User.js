@@ -65,8 +65,17 @@ const userSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['Active', 'Inactive', 'Suspended'],
+      enum: ['Active', 'Inactive', 'Suspended', 'Pending Approval'],
       default: 'Active',
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    approvedAt: {
+      type: Date,
+      default: null,
     },
     permissions: {
       canApproveLeave: { type: Boolean, default: false },

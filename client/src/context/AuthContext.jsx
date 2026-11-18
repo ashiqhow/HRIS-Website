@@ -45,10 +45,12 @@ export const AuthProvider = ({ children }) => {
   const register = async (formData) => {
     const { data } = await api.post('/auth/register', formData);
     if (data.success) {
-      localStorage.setItem('hris_token', data.token);
-      localStorage.setItem('hris_user', JSON.stringify(data.user));
-      setToken(data.token);
-      setUser(data.user);
+      if (data.token) {
+        localStorage.setItem('hris_token', data.token);
+        localStorage.setItem('hris_user', JSON.stringify(data.user));
+        setToken(data.token);
+        setUser(data.user);
+      }
       return data;
     }
   };
